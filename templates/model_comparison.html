@@ -1,0 +1,185 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="dashboard-container">
+
+  <!-- Header -->
+  <div class="header-section" style="margin-bottom:2rem;">
+    <h1 style="color:white;">
+      <i class="fa-solid fa-chart-bar" style="color:var(--primary-color);margin-right:10px;"></i>
+      ML Model Comparison
+    </h1>
+    <p style="color:#94a3b8;">
+      Side-by-side performance comparison of Random Forest vs Logistic Regression
+      on the login attack detection dataset.
+    </p>
+  </div>
+
+  {% if error %}
+  <div class="alert" style="border-color:#ff4d6d;margin-bottom:2rem;">
+    <i class="fa-solid fa-circle-exclamation" style="color:#ff4d6d;"></i>
+    <span>{{ error }}</span>
+  </div>
+  {% endif %}
+
+  {% if metrics %}
+
+  <!-- ── Summary Cards ── -->
+  <div class="stats-grid" style="margin-bottom:2rem;">
+    <div class="stat-card" style="border-top:3px solid var(--primary-color);">
+      <div class="stat-title"><span class="badge-pill badge-rf">Random Forest</span></div>
+      <div class="stat-value" style="font-size:2.2rem;color:var(--primary-color);">{{ metrics.rf.accuracy }}%</div>
+      <div class="stat-desc" style="font-size:0.8rem;margin-top:8px;color:#64748b;">Accuracy</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid var(--accent-color);">
+      <div class="stat-title"><span class="badge-pill badge-lr">Logistic Regression</span></div>
+      <div class="stat-value" style="font-size:2.2rem;color:var(--accent-color);">{{ metrics.lr.accuracy }}%</div>
+      <div class="stat-desc" style="font-size:0.8rem;margin-top:8px;color:#64748b;">Accuracy</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Best Model</div>
+      <div class="stat-value" style="font-size:1.3rem;color:#4ade80;">
+        {% if metrics.rf.f1 >= metrics.lr.f1 %}
+          <i class="fa-solid fa-trophy" style="margin-right:6px;color:gold;"></i>Random Forest
+        {% else %}
+          <i class="fa-solid fa-trophy" style="margin-right:6px;color:gold;"></i>Logistic Regression
+        {% endif %}
+      </div>
+      <div class="stat-desc" style="font-size:0.8rem;margin-top:8px;color:#64748b;">By F1 Score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Dataset Size</div>
+      <div class="stat-value" style="font-size:2rem;">5,000</div>
+      <div class="stat-desc" style="font-size:0.8rem;margin-top:8px;color:#64748b;">1,000 test samples</div>
+    </div>
+  </div>
+
+  <!-- ── Metric Cards ── -->
+  <div class="comparison-grid" style="margin-bottom:2rem;">
+
+    <!-- RF Card -->
+    <div class="model-card rf">
+      <h3>
+        <i class="fa-solid fa-tree" style="color:var(--primary-color);margin-right:8px;"></i>
+        Random Forest
+        <span class="badge-pill badge-rf" style="float:right;">n_estimators=100</span>
+      </h3>
+
+      {% for key, label in [('accuracy','Accuracy'),('precision','Precision'),('recall','Recall'),('f1','F1 Score')] %}
+      <div class="metric-row">
+        <div>
+          <div class="metric-label">{{ label }}</div>
+          <div class="metric-bar-wrap" style="width:160px;margin-top:6px;">
+            <div class="metric-bar" style="width:{{ metrics.rf[key] }}%;background:var(--primary-color);opacity:0.8;"></div>
+          </div>
+        </div>
+        <div class="metric-value" style="color:var(--primary-color);">{{ metrics.rf[key] }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- LR Card -->
+    <div class="model-card lr">
+      <h3>
+        <i class="fa-solid fa-chart-line" style="color:var(--accent-color);margin-right:8px;"></i>
+        Logistic Regression
+        <span class="badge-pill badge-lr" style="float:right;">max_iter=100</span>
+      </h3>
+
+      {% for key, label in [('accuracy','Accuracy'),('precision','Precision'),('recall','Recall'),('f1','F1 Score')] %}
+      <div class="metric-row">
+        <div>
+          <div class="metric-label">{{ label }}</div>
+          <div class="metric-bar-wrap" style="width:160px;margin-top:6px;">
+            <div class="metric-bar" style="width:{{ metrics.lr[key] }}%;background:var(--accent-color);opacity:0.8;"></div>
+          </div>
+        </div>
+        <div class="metric-value" style="color:var(--accent-color);">{{ metrics.lr[key] }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Chart ── -->
+  <div class="recent-logins">
+    <div class="section-header">
+      <h3><i class="fa-solid fa-chart-bar" style="color:var(--primary-color);margin-right:8px;"></i>Visual Comparison</h3>
+    </div>
+    <canvas id="compareChart" height="90"></canvas>
+  </div>
+
+  <!-- ── Feature Importance Info ── -->
+  <div class="recent-logins" style="margin-top:1.5rem;">
+    <div class="section-header">
+      <h3><i class="fa-solid fa-info-circle" style="color:var(--accent-color);margin-right:8px;"></i>Feature Description</h3>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Description</th>
+            <th>Attack Signal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="color:#9d4edd;font-family:monospace;">failed_attempts</td><td style="color:#94a3b8;">Failed logins in past 1 hour</td><td><span class="status-badge status-danger">High</span></td></tr>
+          <tr><td style="color:#9d4edd;font-family:monospace;">login_frequency</td><td style="color:#94a3b8;">Total logins in past 24 hours</td><td><span class="status-badge status-danger">High</span></td></tr>
+          <tr><td style="color:#9d4edd;font-family:monospace;">access_time_hour</td><td style="color:#94a3b8;">Hour of login attempt (0–23)</td><td><span class="status-badge status-blocked">Medium</span></td></tr>
+          <tr><td style="color:#9d4edd;font-family:monospace;">is_new_device</td><td style="color:#94a3b8;">Device not seen before</td><td><span class="status-badge status-blocked">Medium</span></td></tr>
+          <tr><td style="color:#9d4edd;font-family:monospace;">is_suspicious_ip</td><td style="color:#94a3b8;">IP flagged as suspicious</td><td><span class="status-badge status-danger">High</span></td></tr>
+          <tr><td style="color:#9d4edd;font-family:monospace;">location_change</td><td style="color:#94a3b8;">Significant location deviation</td><td><span class="status-badge status-blocked">Medium</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+  const rfData = [{{ metrics.rf.accuracy }}, {{ metrics.rf.precision }}, {{ metrics.rf.recall }}, {{ metrics.rf.f1 }}];
+  const lrData = [{{ metrics.lr.accuracy }}, {{ metrics.lr.precision }}, {{ metrics.lr.recall }}, {{ metrics.lr.f1 }}];
+
+  new Chart(document.getElementById('compareChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Accuracy', 'Precision', 'Recall', 'F1 Score'],
+      datasets: [
+        {
+          label: 'Random Forest',
+          data: rfData,
+          backgroundColor: 'rgba(157,78,221,0.5)',
+          borderColor: '#9d4edd',
+          borderWidth: 2,
+          borderRadius: 6
+        },
+        {
+          label: 'Logistic Regression',
+          data: lrData,
+          backgroundColor: 'rgba(6,182,212,0.4)',
+          borderColor: '#06b6d4',
+          borderWidth: 2,
+          borderRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51,65,85,0.4)' } },
+        y: {
+          ticks: { color: '#94a3b8', callback: v => v + '%' },
+          grid: { color: 'rgba(51,65,85,0.4)' },
+          min: 0, max: 100
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { family: 'Outfit' } } },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%` }
+        }
+      }
+    }
+  });
+  </script>
+
+  {% endif %}
+</div>
+{% endblock %}

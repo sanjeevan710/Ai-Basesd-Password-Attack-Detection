@@ -1,0 +1,221 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="dashboard-container">
+
+  <!-- Header -->
+  <div class="header-section" style="margin-bottom:2rem;">
+    <h1 style="color:white;">
+      <i class="fa-solid fa-user-shield" style="color:var(--error-color);margin-right:10px;"></i>
+      Admin Security Center
+    </h1>
+    <p style="color:#94a3b8;">Monitor attack logs, block IPs, and manage system threats.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card" style="border-color:rgba(255,77,109,0.3);">
+      <div class="stat-title">Total Detected Attacks</div>
+      <div class="stat-value" style="font-size:2rem;color:#ff4d6d;">{{ attack_count }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Blocked IP Addresses</div>
+      <div class="stat-value" style="font-size:2rem;color:white;">{{ blocked_ips_count }}</div>
+      <div class="stat-desc" style="font-size:0.8rem;margin-top:10px;color:#64748b;">Auto-detection active</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Manually Blocked</div>
+      <div class="stat-value" style="font-size:2rem;color:#ff9500;">{{ blocked_ips | length }}</div>
+      <div class="stat-desc" style="font-size:0.8rem;margin-top:10px;color:#64748b;">Admin-enforced blocks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">System Load</div>
+      <div class="stat-value" style="font-size:1.5rem;color:#4ade80;">Normal</div>
+      <div class="stat-desc" style="font-size:0.8rem;margin-top:10px;color:#64748b;">All systems operational</div>
+    </div>
+  </div>
+
+  <!-- ── Charts Row ── -->
+  <div class="charts-grid">
+    <!-- Attack Types Pie -->
+    <div class="chart-card">
+      <h3><i class="fa-solid fa-chart-pie" style="color:var(--error-color);margin-right:8px;"></i>Attack Type Breakdown</h3>
+      <canvas id="attackPie" height="200"></canvas>
+    </div>
+
+    <!-- Attacks Timeline -->
+    <div class="chart-card" style="flex:2;">
+      <h3><i class="fa-solid fa-chart-line" style="color:var(--primary-color);margin-right:8px;"></i>Attack Timeline — Last 7 Days</h3>
+      <canvas id="attackTimeline" height="130"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Manual IP Block ── -->
+  <div class="recent-logins" style="margin-bottom:1.5rem;">
+    <div class="section-header">
+      <h3><i class="fa-solid fa-ban" style="margin-right:8px;color:#ff9500;"></i>Block an IP Address</h3>
+    </div>
+    <form action="{{ url_for('block_ip') }}" method="POST" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div style="flex:1;min-width:180px;">
+        <label class="form-label">IP Address</label>
+        <input type="text" name="ip_address" class="form-control" placeholder="e.g. 192.168.1.100" required style="padding:10px 14px;"/>
+      </div>
+      <div style="flex:2;min-width:220px;">
+        <label class="form-label">Reason</label>
+        <input type="text" name="reason" class="form-control" placeholder="e.g. Persistent brute force" style="padding:10px 14px;"/>
+      </div>
+      <button type="submit" class="btn-danger" style="padding:10px 20px;font-size:0.9rem;height:42px;">
+        <i class="fa-solid fa-ban" style="margin-right:6px;"></i>Block IP
+      </button>
+    </form>
+  </div>
+
+  <!-- ── Currently Blocked IPs ── -->
+  {% if blocked_ips %}
+  <div class="recent-logins" style="margin-bottom:1.5rem;">
+    <div class="section-header">
+      <h3><i class="fa-solid fa-shield-halved" style="margin-right:8px;color:#ff9500;"></i>Currently Blocked IPs</h3>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>IP Address</th>
+            <th>Reason</th>
+            <th>Blocked By</th>
+            <th>Blocked At</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bip in blocked_ips %}
+          <tr>
+            <td style="font-family:monospace;color:var(--accent-color);">{{ bip.ip_address }}</td>
+            <td style="color:#94a3b8;">{{ bip.reason or '—' }}</td>
+            <td style="color:#cbd5e1;">{{ bip.blocked_by }}</td>
+            <td style="color:#64748b;font-size:0.82rem;">{{ bip.blocked_at }}</td>
+            <td>
+              <form action="{{ url_for('unblock_ip') }}" method="POST" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="ip_address" value="{{ bip.ip_address }}"/>
+                <button type="submit" class="btn-success">
+                  <i class="fa-solid fa-lock-open" style="margin-right:4px;"></i>Unblock
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Live Attack Feed ── -->
+  <div class="recent-logins">
+    <div class="section-header">
+      <h3><i class="fa-solid fa-rss" style="margin-right:8px;color:var(--error-color);"></i>Live Attack Feed</h3>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User Affected</th>
+            <th>Attacker IP</th>
+            <th>Attack Type</th>
+            <th>Action Taken</th>
+            <th>Block</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for attack in attack_logs %}
+          <tr>
+            <td style="color:#94a3b8;font-size:0.82rem;">{{ attack.timestamp }}</td>
+            <td style="font-weight:500;color:#cbd5e1;">{{ attack.username or '—' }}</td>
+            <td style="font-family:monospace;color:var(--accent-color);">{{ attack.ip_address }}</td>
+            <td><span style="font-weight:600;color:#ff4d6d;">{{ attack.attack_type }}</span></td>
+            <td><span class="status-badge status-blocked">{{ attack.action_taken }}</span></td>
+            <td>
+              <form action="{{ url_for('block_ip') }}" method="POST" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="ip_address" value="{{ attack.ip_address }}"/>
+                <input type="hidden" name="reason" value="Attack detected: {{ attack.attack_type }}"/>
+                <button type="submit" class="btn-danger" title="Block this IP">
+                  <i class="fa-solid fa-ban"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const chartOpts = {
+  responsive: true,
+  plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'Outfit' } } } }
+};
+
+// ── Attack Type Pie ──────────────────────────────────
+const attackLabels = {{ attack_type_labels | tojson }};
+const attackCounts = {{ attack_type_counts | tojson }};
+
+if (attackLabels.length > 0) {
+  new Chart(document.getElementById('attackPie'), {
+    type: 'doughnut',
+    data: {
+      labels: attackLabels,
+      datasets: [{
+        data: attackCounts,
+        backgroundColor: ['rgba(255,77,109,0.7)','rgba(157,78,221,0.7)','rgba(6,182,212,0.7)','rgba(255,149,0,0.7)'],
+        borderColor:     ['#ff4d6d','#9d4edd','#06b6d4','#ff9500'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      ...chartOpts,
+      cutout: '55%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 14, font: { family: 'Outfit' } } }
+      }
+    }
+  });
+} else {
+  document.getElementById('attackPie').parentElement.innerHTML +=
+    '<p style="color:#64748b;text-align:center;margin-top:1rem;">No attack data yet.</p>';
+}
+
+// ── Timeline Bar Chart ───────────────────────────────
+const tlLabels = {{ timeline_labels | tojson }};
+const tlCounts = {{ timeline_counts | tojson }};
+
+new Chart(document.getElementById('attackTimeline'), {
+  type: 'line',
+  data: {
+    labels: tlLabels,
+    datasets: [{
+      label: 'Attacks Detected',
+      data: tlCounts,
+      borderColor: '#ff4d6d',
+      backgroundColor: 'rgba(255,77,109,0.1)',
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#ff4d6d',
+      pointRadius: 5
+    }]
+  },
+  options: {
+    ...chartOpts,
+    scales: {
+      x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(51,65,85,0.5)' } },
+      y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(51,65,85,0.5)' }, beginAtZero: true }
+    }
+  }
+});
+</script>
+{% endblock %}

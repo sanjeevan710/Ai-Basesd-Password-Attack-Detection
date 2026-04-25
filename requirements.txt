@@ -1,0 +1,8 @@
+flask
+flask-login
+flask-wtf
+werkzeug
+scikit-learn
+pandas
+numpy
+joblib
