@@ -1,0 +1,308 @@
+# 🛡️ Ai-Basesd-Password-Attack-Detection — ML-Powered Login Attack Detection
+
+A Flask web application that uses Machine Learning (Random Forest & Logistic Regression) to detect and block brute-force login attacks in real time.
+
+---
+
+## 📌 Features
+
+- 🔐 Secure login & registration with CSRF protection
+- 🤖 Real-time ML-based attack detection (Random Forest model)
+- 🚫 Automatic blocking after suspicious activity
+- 👮 Admin panel to monitor attacks and manually block/unblock IPs
+- 📊 Model comparison dashboard (Random Forest vs Logistic Regression)
+- 🧪 Built-in brute-force attack simulator for demo/testing
+
+---
+
+## 🗂️ Project Structure
+
+```
+Ai-Basesd-Password-Attack-Detection/
+│
+├── app.py                  # Main Flask application
+├── config.py               # App configuration (secret key, model paths)
+├── db.py                   # Database setup and initialization
+├── train_model.py          # Script to train and save ML models
+├── test_attack.py          # Brute-force attack simulation script
+├── requirements.txt        # Python dependencies
+│
+├── models/                 # Auto-created after training
+│   ├── random_forest_model.pkl
+│   └── logistic_regression_model.pkl
+│
+├── templates/
+│   ├── layout.html
+│   ├── index.html          # Login page
+│   ├── register.html
+│   ├── dashboard.html
+│   ├── admin.html
+│   └── model_comparison.html
+│
+└── static/
+    └── css/
+        └── style.css
+```
+
+---
+
+## ⚙️ Prerequisites
+
+Make sure you have the following installed on your system:
+
+- **Python 3.8 or higher** → [Download Python](https://www.python.org/downloads/)
+- **pip** (comes with Python)
+- **Git** (to clone the repo)
+
+To check if Python is installed:
+```bash
+python --version
+# or
+python3 --version
+```
+
+---
+
+## 🚀 Setup & Installation (Step by Step)
+
+### Step 1 — Clone the Repository
+
+```bash
+git clone https://github.com/sanjeevan710/Ai-Basesd-Password-Attack-Detection.git
+cd ai-shield
+```
+
+> Replace `your-username` with your actual GitHub username.
+
+---
+
+### Step 2 — Create a Virtual Environment
+
+A virtual environment keeps dependencies isolated from your system Python.
+
+```bash
+# Create the virtual environment
+python -m venv venv
+```
+
+Activate it:
+
+- **Windows:**
+  ```bash
+  venv\Scripts\activate
+  ```
+- **macOS / Linux:**
+  ```bash
+  source venv/bin/activate
+  ```
+
+You should see `(venv)` at the start of your terminal prompt.
+
+---
+
+### Step 3 — Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs Flask, scikit-learn, pandas, numpy, and all other required packages.
+
+---
+
+### Step 4 — Set Up the Folder Structure
+
+Make sure the `templates/` and `static/css/` directories exist and contain the HTML/CSS files. Your layout should look like this:
+
+```
+Ai-Basesd-Password-Attack-Detection/
+├── templates/
+│   ├── layout.html
+│   ├── index.html
+│   ├── register.html
+│   ├── dashboard.html
+│   ├── admin.html
+│   └── model_comparison.html
+└── static/
+    └── css/
+        └── style.css
+```
+
+If they are missing, create the folders and move the files:
+
+```bash
+mkdir -p templates static/css
+# Then move your HTML files into templates/ and style.css into static/css/
+```
+
+---
+
+### Step 5 — Train the ML Models
+
+This step generates synthetic login data and trains two models, saving them to a `models/` folder.
+
+```bash
+python train_model.py
+```
+
+Expected output:
+```
+Generating synthetic dataset...
+Training Random Forest...
+Random Forest Accuracy: 0.97
+Training Logistic Regression...
+Logistic Regression Accuracy: 0.XX
+Saving models...
+Models saved successfully in 'models/' directory.
+```
+
+> ⚠️ The app **will not detect attacks** without this step. Always run it before starting the server.
+
+---
+
+### Step 6 — Initialize the Database
+
+The database is auto-created when you first run the app. But you can also initialize it manually:
+
+```bash
+python db.py
+```
+
+This creates `database.db` with the required tables and a default **admin** account.
+
+---
+
+### Step 7 — Run the Application
+
+```bash
+python app.py
+```
+
+You should see:
+```
+✅ Models loaded successfully.
+ * Running on http://127.0.0.1:5000
+```
+
+Open your browser and go to:
+```
+http://127.0.0.1:5000
+```
+
+---
+
+## 🔑 Default Login Credentials
+
+| Role  | Username | Password   |
+|-------|----------|------------|
+| Admin | `admin`  | `admin123` |
+
+> ⚠️ Change the admin password after your first login in a production environment.
+
+---
+
+## 🧪 Simulate a Brute-Force Attack (Demo)
+
+With the server running, open a **new terminal**, activate the virtual environment, and run:
+
+```bash
+python test_attack.py
+```
+
+This script sends 10 rapid fake login attempts and shows when the AI Shield blocks the attacker.
+
+Expected output:
+```
+=======================================================
+   Ai-Basesd-Password-Attack-Detection — Brute Force Attack Simulation
+=======================================================
+
+Attempt  1 | Status: 200 | URL: http://127.0.0.1:5000/login
+          ✅ Wrong password accepted (not blocked yet)
+...
+Attempt  6 | Status: 200 | URL: http://127.0.0.1:5000/login
+          🔴 BLOCKED by AI Shield at attempt 6!
+
+Simulation complete.
+```
+
+---
+
+## 🖥️ Application Pages
+
+| URL                  | Access      | Description                          |
+|----------------------|-------------|--------------------------------------|
+| `/`                  | Public      | Redirects to login                   |
+| `/login`             | Public      | Login page with ML protection        |
+| `/register`          | Public      | Create a new user account            |
+| `/dashboard`         | Logged in   | User activity and login stats        |
+| `/admin`             | Admin only  | Attack logs, IP blocking/unblocking  |
+| `/model-comparison`  | Admin only  | RF vs Logistic Regression metrics    |
+| `/logout`            | Logged in   | Logs out the current user            |
+
+---
+
+## 🔒 How the Attack Detection Works
+
+1. On every login attempt, the app collects 6 features:
+   - `failed_attempts` — failed logins from this IP in the last hour
+   - `login_frequency` — total logins from this IP in the last 24 hours
+   - `access_time_hour` — hour of the day (0–23)
+   - `is_new_device` — whether the device/browser is new
+   - `is_suspicious_ip` — IP flagged as suspicious
+   - `location_change` — significant change in access pattern
+
+2. These features are fed to the **Random Forest model**.
+3. If the model predicts an attack (probability > 0.5), the request is **blocked** and logged.
+4. Additionally, any IP with **5+ failed attempts in one hour** is hard-blocked regardless of ML output.
+5. Admins can manually block/unblock any IP from the Admin Panel.
+
+---
+
+## 🛠️ Troubleshooting
+
+**`❌ CRITICAL: Model not found`**
+→ You skipped Step 5. Run `python train_model.py` first.
+
+**`ModuleNotFoundError: No module named 'flask'`**
+→ Your virtual environment is not activated. Run `source venv/bin/activate` (macOS/Linux) or `venv\Scripts\activate` (Windows).
+
+**`Address already in use` on port 5000**
+→ Another process is using port 5000. Run the app on a different port:
+```bash
+flask run --port 5001
+```
+
+**Templates not found error**
+→ Make sure all `.html` files are inside a `templates/` folder at the root of the project.
+
+**CSRF token error on login**
+→ The session expired. Refresh the page and try again.
+
+---
+
+## 📦 Dependencies
+
+| Package        | Purpose                          |
+|----------------|----------------------------------|
+| Flask          | Web framework                    |
+| Flask-Login    | User session management          |
+| Flask-WTF      | CSRF protection                  |
+| Werkzeug       | Password hashing                 |
+| scikit-learn   | ML models (Random Forest, LR)    |
+| pandas         | Data manipulation                |
+| numpy          | Numerical operations             |
+| joblib         | Model serialization              |
+
+---
+
+## 📄 License
+
+This project is built for academic/demo purposes as an MCA project. Feel free to use and modify it.
+
+---
+
+## 👨‍💻 Author
+
+**AI Shield** — MCA Project 2024  
+Built with ❤️ using Flask + scikit-learn
