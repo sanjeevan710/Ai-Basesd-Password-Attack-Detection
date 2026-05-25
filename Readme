@@ -69,10 +69,8 @@ python3 --version
 
 ```bash
 git clone https://github.com/sanjeevan710/Ai-Basesd-Password-Attack-Detection.git
-cd ai-shield
+cd Ai-Basesd-Password-Attack-Detection
 ```
-
-> Replace `your-username` with your actual GitHub username.
 
 ---
 
